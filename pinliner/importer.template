@@ -1,0 +1,69 @@
+import os
+import sys
+import types
+
+
+class InlinerImporter(object):
+    DICT = {}
+    ABS_FILE = os.path.abspath(__file__)
+
+    def __init__(self, data):
+        self.data = data
+
+    def _get_module(self, fullname):
+        fullname = fullname.split('.')
+        module = self.data
+        for name in fullname:
+            module = module.get(name)
+            if not module:
+                return None
+        return module
+
+    def find_module(self, fullname, path):
+        module = self._get_module(fullname)
+        if module:
+            return self
+
+    def load_module(self, fullname):
+        # If the module it's already in there we'll reload but won't remove the
+        # entry if we fail
+        exists = fullname in sys.modules
+        # Get the module from the data
+        code = self._get_module(fullname)
+
+        module = types.ModuleType(fullname.rsplit('.')[-1])
+        module.__loader__ = self
+        module.__file__ = '<Inliner>:%s:%s' % (self.ABS_FILE, fullname)
+
+        # For packages we have to read the __init__ string
+        if isinstance(code, dict):
+            code = code.get('__init__')
+            module.__path__ = []
+            module.__package__ = fullname
+        else:
+            module.__package__ = fullname.rpartition('.')[0]
+
+        sys.modules[fullname] = module
+
+        try:
+            exec code in module.__dict__
+        except:
+            if not exists:
+                del sys.modules[fullname]
+            raise
+
+        return module
+
+
+inliner_packages = {
+${CONTENTS}
+}
+
+# Add our own finder and loader
+sys.meta_path.append(InlinerImporter(inliner_packages))
+
+# Run the init script in this namespace
+exec inliner_packages[__name__]['__init__'] in globals()
+
+# Fake that we are a package and not a module
+globals()['__path__'] = []

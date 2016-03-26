@@ -33,7 +33,8 @@ And you execute:
     $ cd test
     $ python
 
-You'll be able to use this my_package.py file as if it were the real package:
+You'll be able to use generated `my_package.py` file as if it were the real
+package:
 
 .. code:: python
 
