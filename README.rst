@@ -24,12 +24,12 @@ Imports will work as usual so if you have a package structure like:
          │    └── __init__.py
          ├── __init__.py
 
-And you execute:
+And with pinliner installed you execute:
 
 .. code:: bash
 
     $ mkdir test
-    $ ./pinliner.py my_package test/my_package.py
+    $ pinliner my_package test/my_package.py
     $ cd test
     $ python
 
@@ -47,3 +47,17 @@ And `__init__.py` contents will be executed as expected when importing
 with your normal package.
 
 Modules will also behave as usual.
+
+Installation
+------------
+
+You can install pinliner globally in your system or use a virtual environment,
+this is how it could be done using a virtual environment:
+
+.. code:: bash
+
+    $ virtualenv .venv
+    $ source .venv/bin/activate
+    $ pip install pinliner
+
+After that you can run the tool with `pinliner`.

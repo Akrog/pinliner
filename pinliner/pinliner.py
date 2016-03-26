@@ -104,7 +104,7 @@ a single file and be able to use this single file as if it were a package.
 
     And you execute:
         $ mkdir test
-        $ ./pinliner.py my_package test/my_package.py
+        $ pinliner my_package test/my_package.py
         $ cd test
         $ python
 
