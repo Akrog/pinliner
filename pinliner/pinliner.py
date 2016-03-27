@@ -40,7 +40,7 @@ def process_file(cfg, path):
 
         # Insert escape character before ''' since we'll be using ''' to insert
         # the code as a string
-        code = code.replace("'''", "\'''")
+        code = code.replace("'''", r"\'''")
         # Output the file as a dictionary entry
         output(cfg, "'%s': '''%s'''," % (module_name, code))
 
