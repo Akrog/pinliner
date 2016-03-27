@@ -51,7 +51,8 @@ class InlinerImporter(object):
         sys.modules[fullname] = module
 
         try:
-            exec code in module.__dict__
+            compiled_code = compile(code, module.__file__, 'exec')
+            exec compiled_code in module.__dict__
         except:
             if not exists:
                 del sys.modules[fullname]
@@ -89,11 +90,14 @@ def prepare_package():
 
     # Execute package's init code into a new dictionary
     module_dict = {}
-    exec inliner_packages[__name__]['__init__'] in module_dict
+    filename = __name__ + '/__init__.py'
+    compiled_code = compile(inliner_packages[__name__]['__init__'], filename,
+                            'exec')
+    exec compiled_code in module_dict
 
     # Fix package variables in that dictionary
     module_dict.update(__path__=[__name__],
-                       __file__=__name__ + '/__init__.py',
+                       __file__=filename,
                        __package__=__name__,
                        __name__=__name__)
 
