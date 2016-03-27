@@ -3,6 +3,8 @@ import types
 
 PINLINER_MODULE_NAME = 'pinliner_loader'
 
+FORCE_EXC_HOOK = %{FORCE_EXC_HOOK}
+
 inliner_importer_code = '''
 import os
 import sys
@@ -10,8 +12,15 @@ import types
 
 
 class InlinerImporter(object):
-    def __init__(self, data):
+    def __init__(self, data, set_excepthook=True):
         self.data = data
+        if set_excepthook:
+            sys.excepthook = self.excepthook
+
+    @staticmethod
+    def excepthook(type, value, traceback):
+        import traceback as tb
+        tb.print_exception(type, value, traceback)
 
     def _get_module(self, fullname):
         fullname = fullname.split('.')
@@ -27,20 +36,29 @@ class InlinerImporter(object):
         if module:
             return self
 
+    def get_source(self, fullname, return_is_package=False):
+        # Get the module from the data
+        code = self._get_module(fullname)
+        is_package = isinstance(code, dict)
+        if is_package:
+            # For packages we have to read the code in __init__
+            code = code.get('__init__')
+        if return_is_package:
+            return is_package, code
+        return code
+
     def load_module(self, fullname):
         # If the module it's already in there we'll reload but won't remove the
         # entry if we fail
         exists = fullname in sys.modules
-        # Get the module from the data
-        code = self._get_module(fullname)
 
         module = types.ModuleType(fullname)
         module.__loader__ = self
         path = fullname.replace('.', os.path.sep)
 
-        if isinstance(code, dict):
-            # For packages we have to read the code in __init__
-            code = code.get('__init__')
+        is_package, code = self.get_source(fullname, True)
+
+        if is_package:
             module.__package__ = fullname
             module.__file__ = os.path.join(path, '__init__.py')
             module.__path__ = [path]
@@ -84,9 +102,23 @@ def prepare_package():
     # already there.
     # This must be done before we initialize the package, as it may import
     # packages and modules contained in the package itself.
-    if not any(isinstance(mp, module.InlinerImporter) and
-               mp.data == inliner_packages for mp in sys.meta_path):
-        sys.meta_path.append(module.InlinerImporter(inliner_packages))
+    for finder in sys.meta_path:
+        if (isinstance(finder, module.InlinerImporter) and
+                finder.data == inliner_packages):
+            importer = finder
+    else:
+        # If we haven't forced the setting of the uncaught exception handler
+        # we replace it only if it hasn't been replace yet, this is because
+        # CPython default handler does not use traceback or even linecache, so
+        # it never calls get_source method to get the code, but for example
+        # iPython does, so we don't need to replace the handler.
+        if FORCE_EXC_HOOK is None:
+            set_excepthook = sys.__excepthook__ == sys.excepthook
+        else:
+            set_excepthook = FORCE_EXC_HOOK
+
+        importer = module.InlinerImporter(inliner_packages, set_excepthook)
+        sys.meta_path.append(importer)
 
     # Execute package's init code into a new dictionary
     module_dict = {}
@@ -99,7 +131,8 @@ def prepare_package():
     module_dict.update(__path__=[__name__],
                        __file__=filename,
                        __package__=__name__,
-                       __name__=__name__)
+                       __name__=__name__,
+                       __loader__=importer)
 
     # Now change this modules global namespace so it matches package's original
     # namespace

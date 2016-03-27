@@ -50,7 +50,9 @@ def template(cfg):
     with open(template_path) as f:
         template = f.read()
     prefix_end = template.index(TEMPLATE_PATTERN)
-    cfg.outfile.write(template[:prefix_end])
+    prefix_data = template[:prefix_end].replace('%{FORCE_EXC_HOOK}',
+                                                str(cfg.set_hook))
+    cfg.outfile.write(prefix_data)
     postfix_begin = prefix_end + len(TEMPLATE_PATTERN)
     return template[postfix_begin:]
 
@@ -125,6 +127,12 @@ normal package.  Modules will also behave as usual.
     parser.add_argument('package', help='Package to inline.')
     parser.add_argument('outfile', nargs='?', type=argparse.FileType('w'),
                         default=sys.stdout, help='Output file.')
+    parser.add_argument('--set-except', default=None, dest='set_hook',
+                        action='store_true',
+                        help='Force setting handler for uncaught exceptions.')
+    parser.add_argument('--no-except', default=None, dest='set_hook',
+                        action='store_false',
+                        help="Don't set handler for uncaught exceptions.")
     return parser.parse_args()
 
 
