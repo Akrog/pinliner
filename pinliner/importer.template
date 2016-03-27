@@ -1,11 +1,15 @@
+import sys
+import types
+
+PINLINER_MODULE_NAME = 'pinliner_loader'
+
+inliner_importer_code = '''
 import os
 import sys
 import types
 
 
 class InlinerImporter(object):
-    DICT = {}
-
     def __init__(self, data):
         self.data = data
 
@@ -54,17 +58,51 @@ class InlinerImporter(object):
             raise
 
         return module
+'''
 
 
 inliner_packages = {
 ${CONTENTS}
 }
 
-# Add our own finder and loader
-sys.meta_path.append(InlinerImporter(inliner_packages))
 
-# Run the init script in this namespace
-exec inliner_packages[__name__]['__init__'] in globals()
+def prepare_package():
+    # If the loader code is not already loaded we create a specific module for
+    # it.  We need to do it this way so that the functions in there are not
+    # compiled with a reference to this module's global dictionary in
+    # __globals__.
+    module = sys.modules.get(PINLINER_MODULE_NAME)
+    if not module:
+        module = types.ModuleType(PINLINER_MODULE_NAME)
+        module.__package__ = ''
+        module.__file__ = PINLINER_MODULE_NAME + '.py'
+        exec inliner_importer_code in module.__dict__
+        sys.modules[PINLINER_MODULE_NAME] = module
 
-# Fake that we are a package and not a module
-globals()['__path__'] = []
+    # Add our own finder and loader for this specific package if it's not
+    # already there.
+    # This must be done before we initialize the package, as it may import
+    # packages and modules contained in the package itself.
+    if not any(isinstance(mp, module.InlinerImporter) and
+               mp.data == inliner_packages for mp in sys.meta_path):
+        sys.meta_path.append(module.InlinerImporter(inliner_packages))
+
+    # Execute package's init code into a new dictionary
+    module_dict = {}
+    exec inliner_packages[__name__]['__init__'] in module_dict
+
+    # Fix package variables in that dictionary
+    module_dict.update(__path__=[__name__],
+                       __file__=__name__ + '/__init__.py',
+                       __package__=__name__,
+                       __name__=__name__)
+
+    # Now change this modules global namespace so it matches package's original
+    # namespace
+    globals().clear()
+    globals().update(module_dict)
+
+
+# Prepare loader's module and populate this namespace only with package's
+# __init__
+prepare_package()
