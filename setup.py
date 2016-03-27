@@ -24,7 +24,7 @@ test_requirements = [
 
 setup(
     name='pinliner',
-    version='0.0.1',
+    version='0.1.0',
     description="Python Inliner merges in a single file all files from a "
                 "Python package.",
     long_description=readme + '\n\n' + history,

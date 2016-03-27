@@ -12,6 +12,10 @@ pinliner - Python Inliner
 This tool allows you to merge all files that comprise a Python package into
 a single file and be able to use this single file as if it were a package.
 
+Not only will it behave as if it were the original package, but it will also
+show code in exceptions and debug sessions, and will display the right line
+number and file when logging.
+
 Imports will work as usual so if you have a package structure like:
 
 ::
