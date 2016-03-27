@@ -2,7 +2,7 @@
 History
 =======
 
-0.1.0 (2016-03-xx)
+0.1.0 (2016-03-27)
 ------------------
 
 * Show code when debugging and on tracebacks
