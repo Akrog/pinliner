@@ -42,7 +42,7 @@ def process_file(cfg, path):
         # the code as a string
         code = code.replace("'''", "\'''")
         # Output the file as a dictionary entry
-        output(cfg, "'%s': '''\n%s\n'''," % (module_name, code))
+        output(cfg, "'%s': '''%s'''," % (module_name, code))
 
 
 def template(cfg):
