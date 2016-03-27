@@ -5,7 +5,6 @@ import types
 
 class InlinerImporter(object):
     DICT = {}
-    ABS_FILE = os.path.abspath(__file__)
 
     def __init__(self, data):
         self.data = data
@@ -31,17 +30,19 @@ class InlinerImporter(object):
         # Get the module from the data
         code = self._get_module(fullname)
 
-        module = types.ModuleType(fullname.rsplit('.')[-1])
+        module = types.ModuleType(fullname)
         module.__loader__ = self
-        module.__file__ = '<Inliner>:%s:%s' % (self.ABS_FILE, fullname)
+        path = fullname.replace('.', os.path.sep)
 
-        # For packages we have to read the __init__ string
         if isinstance(code, dict):
+            # For packages we have to read the code in __init__
             code = code.get('__init__')
-            module.__path__ = []
             module.__package__ = fullname
+            module.__file__ = os.path.join(path, '__init__.py')
+            module.__path__ = [path]
         else:
-            module.__package__ = fullname.rpartition('.')[0]
+            module.__package__ = fullname.rsplit('.', 1)[0]
+            module.__file__ = path + '.py'
 
         sys.modules[fullname] = module
 
