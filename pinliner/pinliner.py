@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 import argparse
+import json
 import os
 from pinliner import __version__
 import sys
@@ -12,37 +13,33 @@ TEMPLATE_FILE = 'importer.template'
 TEMPLATE_PATTERN = '${CONTENTS}'
 
 
+inliner_packages = {}
+
+
 def output(cfg, what, newline=True):
     # We need indentation for PEP8
-    cfg.outfile.write('    ' * cfg.depth)
     cfg.outfile.write(what)
     if newline:
-        cfg.outfile.write('\n')
+        cfg.outfile.write(os.linesep)
 
 
-def nested(f):
-    def wrapper(cfg, *args, **kwargs):
-        cfg.depth += 1
-        result = f(cfg, *args, **kwargs)
-        cfg.depth -= 1
-        return result
-    return wrapper
-
-
-@nested
-def process_file(cfg, path):
-    # Get the filename from the path and remove the extension (.py)
-    filename = os.path.split(path)[1]
-    module_name = os.path.splitext(filename)[0]
-    with open(path, 'r') as f:
+def process_file(cfg, base_dir, package_path):
+    output(cfg, "'''")
+    path = os.path.splitext(package_path)[0].replace(os.path.sep, '.')
+    package_start = cfg.outfile.tell()
+    with open(os.path.join(base_dir, package_path), 'r') as f:
         # Read the whole file
         code = f.read()
 
         # Insert escape character before ''' since we'll be using ''' to insert
         # the code as a string
-        code = code.replace("'''", r"\'''")
-        # Output the file as a dictionary entry
-        output(cfg, "'%s': '''%s'''," % (module_name, code))
+        output(cfg, code.replace("'''", r"\'''"))
+    package_end = cfg.outfile.tell()
+    output(cfg, "'''")
+    is_package = 1 if path.endswith('__init__') else 0
+    if is_package:
+        path = path[:-9]
+    return path, is_package, package_start, package_end
 
 
 def template(cfg):
@@ -57,26 +54,50 @@ def template(cfg):
     return template[postfix_begin:]
 
 
-@nested
-def process_directory(cfg, dirname):
-    package_name = os.path.split(dirname)[1]
-    output(cfg, "'%s': {" % package_name)
-    contents = os.listdir(dirname)
+def process_directory(cfg, base_dir, package_path):
+    files = []
+    contents = os.listdir(os.path.join(base_dir, package_path))
     for content in contents:
-        path = os.path.join(dirname, content)
+        next_path = os.path.join(package_path, content)
+        path = os.path.join(base_dir, next_path)
         if is_module(path):
-            process_file(cfg, path)
+            files.append(process_file(cfg, base_dir, next_path))
         elif is_package(path):
-            process_directory(cfg, path)
-    output(cfg, "},")
+            files.extend(process_directory(cfg, base_dir, next_path))
+    return files
+
+inliner_packages = {
+    "a": [
+        1, 2334, 2811],
+    "a.c": [1, 2852, 2877],
+    "a.b": [0, 2186, 2326],
+    "a.c.d": [0, 2819, 2844]
+}
 
 
 def process_files(cfg):
-    cfg.depth = 0
     # template would look better as a context manager
     postfix = template(cfg)
+    files = []
     for package_path in cfg.packages:
-        process_directory(cfg, package_path)
+        base_dir, module_name = os.path.split(package_path)
+        files.extend(process_directory(cfg, base_dir, module_name))
+
+    # Transform the list into a dictionary
+    inliner_packages = {path: (is_package, begin, end)
+                        for path, is_package, begin, end in files}
+
+    # Generate the references to the positions of the different packages and
+    # modules inside the main file.
+    # We don't use indent to decrease the number of bytes in the file
+    data = json.dumps(inliner_packages)
+    output(cfg, 2 * os.linesep + 'inliner_packages = ', newline=False)
+    data = data.replace('],', '],' + os.linesep + '   ')
+    data = data.replace('[', '[' + os.linesep + 8 * ' ')
+    data = '%s%s    %s%s%s' % (data[0], os.linesep, data[1:-1], os.linesep,
+                               data[-1])
+
+    output(cfg, data)
     # No newline on last line, as we want output file to be PEP8 compliant.
     output(cfg, postfix, newline=False)
     cfg.outfile.close()

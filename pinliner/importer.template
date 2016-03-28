@@ -1,3 +1,4 @@
+import os
 import sys
 import types
 
@@ -12,8 +13,9 @@ import types
 
 
 class InlinerImporter(object):
-    def __init__(self, data, set_excepthook=True):
+    def __init__(self, data, datafile, set_excepthook=True):
         self.data = data
+        self.datafile = datafile
         if set_excepthook:
             sys.excepthook = self.excepthook
 
@@ -32,17 +34,15 @@ class InlinerImporter(object):
         return module
 
     def find_module(self, fullname, path):
-        module = self._get_module(fullname)
+        module = fullname in self.data
         if module:
             return self
 
     def get_source(self, fullname, return_is_package=False):
-        # Get the module from the data
-        code = self._get_module(fullname)
-        is_package = isinstance(code, dict)
-        if is_package:
-            # For packages we have to read the code in __init__
-            code = code.get('__init__')
+        is_package, start, end = self.data[fullname]
+        with open(self.datafile) as datafile:
+            datafile.seek(start)
+            code = datafile.read(end - start)
         if return_is_package:
             return is_package, code
         return code
@@ -54,10 +54,10 @@ class InlinerImporter(object):
 
         module = types.ModuleType(fullname)
         module.__loader__ = self
-        path = fullname.replace('.', os.path.sep)
 
         is_package, code = self.get_source(fullname, True)
 
+        path = fullname.replace('.', os.path.sep)
         if is_package:
             module.__package__ = fullname
             module.__file__ = os.path.join(path, '__init__.py')
@@ -79,11 +79,7 @@ class InlinerImporter(object):
         return module
 '''
 
-
-inliner_packages = {
 ${CONTENTS}
-}
-
 
 def prepare_package():
     # If the loader code is not already loaded we create a specific module for
@@ -117,14 +113,23 @@ def prepare_package():
         else:
             set_excepthook = FORCE_EXC_HOOK
 
-        importer = module.InlinerImporter(inliner_packages, set_excepthook)
+        importer = module.InlinerImporter(inliner_packages, __file__,
+                                          set_excepthook)
         sys.meta_path.append(importer)
 
     # Execute package's init code into a new dictionary
     module_dict = {}
+
+    __, start, end = inliner_packages[__name__]
+    # We canno use __file__ directly because on the second run __file__ will
+    # be the compiled file (.pyc) and that's not the file we want to read.
+    filename = os.path.splitext(__file__)[0] + '.py'
+    with open(filename) as datafile:
+        datafile.seek(start)
+        code = datafile.read(end - start)
+
     filename = __name__ + '/__init__.py'
-    compiled_code = compile(inliner_packages[__name__]['__init__'], filename,
-                            'exec')
+    compiled_code = compile(code, filename, 'exec')
     exec compiled_code in module_dict
 
     # Fix package variables in that dictionary

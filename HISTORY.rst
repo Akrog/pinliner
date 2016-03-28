@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.0 (2016-xx-yy)
+------------------
+
+* Reduce memory footprint to keep the package structure and code.
+
 0.1.0 (2016-03-27)
 ------------------
 
