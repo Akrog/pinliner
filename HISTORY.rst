@@ -2,7 +2,7 @@
 History
 =======
 
-0.2.0 (2016-xx-yy)
+0.1.1 (2016-03-29)
 ------------------
 
 * Fix missing template file when installing
