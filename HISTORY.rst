@@ -7,6 +7,7 @@ History
 
 * Fix missing template file when installing
 * Reduce memory footprint to keep the package structure and code.
+* Include tagging of beginning of files in the output.
 
 0.1.0 (2016-03-27)
 ------------------

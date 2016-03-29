@@ -24,7 +24,8 @@ def output(cfg, what, newline=True):
 
 
 def process_file(cfg, base_dir, package_path):
-    output(cfg, "'''")
+    if cfg.tagging:
+        output(cfg, '<tag:' + package_path + '>')
     path = os.path.splitext(package_path)[0].replace(os.path.sep, '.')
     package_start = cfg.outfile.tell()
     with open(os.path.join(base_dir, package_path), 'r') as f:
@@ -33,9 +34,8 @@ def process_file(cfg, base_dir, package_path):
 
         # Insert escape character before ''' since we'll be using ''' to insert
         # the code as a string
-        output(cfg, code.replace("'''", r"\'''"))
+        output(cfg, code.replace("'''", r"\'''"), newline=cfg.tagging)
     package_end = cfg.outfile.tell()
-    output(cfg, "'''")
     is_package = 1 if path.endswith('__init__') else 0
     if is_package:
         path = path[:-9]
@@ -79,9 +79,12 @@ def process_files(cfg):
     # template would look better as a context manager
     postfix = template(cfg)
     files = []
+
+    output(cfg, "'''")
     for package_path in cfg.packages:
         base_dir, module_name = os.path.split(package_path)
         files.extend(process_directory(cfg, base_dir, module_name))
+    output(cfg, "'''")
 
     # Transform the list into a dictionary
     inliner_packages = {path: (is_package, begin, end)
@@ -139,6 +142,10 @@ a single file and be able to use this single file as if it were a package.
     And __init__.py contents will be executed as expected when importing
 my_package and you'll be able to access its contents like you would with your
 normal package.  Modules will also behave as usual.
+
+    By default there is no visible separation between the different modules'
+source code, but one can be enabled for clarity with option --tag, which will
+include a newline and a <tag:file_path> tag before each of the source files.
 """ % __version__
     general_epilog = None
 
@@ -154,6 +161,9 @@ normal package.  Modules will also behave as usual.
     parser.add_argument('--no-except', default=None, dest='set_hook',
                         action='store_false',
                         help="Don't set handler for uncaught exceptions.")
+    parser.add_argument('--tag', default=False, dest='tagging',
+                        action='store_true',
+                        help="Mark with <tag:file_path> each added file.")
     return parser.parse_args()
 
 
