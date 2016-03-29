@@ -34,8 +34,8 @@ setup(
     packages=[
         'pinliner',
     ],
-    package_dir={'pnnliner':
-                 'pnnliner'},
+    package_dir={'pinliner':
+                 'pinliner'},
     include_package_data=True,
     install_requires=requirements,
     license="Apache",
@@ -56,5 +56,5 @@ setup(
             'pinliner=pinliner.pinliner:main',
         ],
     },
-
+    package_data={'pinliner': ['importer.template']},
 )
