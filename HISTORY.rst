@@ -6,6 +6,7 @@ History
 ------------------
 
 * Add support for incompatible loaders to coexists.
+* Generate and use pyc files for modules.
 
 0.1.1 (2016-03-29)
 ------------------

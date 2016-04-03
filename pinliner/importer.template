@@ -3,12 +3,15 @@ import sys
 import types
 
 PINLINER_MODULE_NAME = 'pinliner_loader'
-loader_version = '0.1.0'
+loader_version = '0.2.0'
 
 FORCE_EXC_HOOK = %{FORCE_EXC_HOOK}
 
 inliner_importer_code = '''
+import imp
+import marshal
 import os
+import struct
 import sys
 import types
 
@@ -31,14 +34,35 @@ class InlinerImporter(object):
         if module:
             return self
 
-    def get_source(self, fullname, return_is_package=False):
-        is_package, start, end, ts = self.data[fullname]
+    def get_source(self, fullname):
+        __, start, end, ts = self.data[fullname]
         with open(self.datafile) as datafile:
             datafile.seek(start)
             code = datafile.read(end - start)
-        if return_is_package:
-            return is_package, code
         return code
+
+    def get_code(self, fullname, filename):
+        py_ts = self.data[fullname][3]
+        try:
+            with open(fullname + '.pyc', 'rb') as pyc:
+                pyc_magic = pyc.read(4)
+                pyc_ts = struct.unpack('<I', pyc.read(4))[0]
+                if pyc_magic == imp.get_magic() and pyc_ts == py_ts:
+                    return marshal.load(pyc)
+        except:
+            pass
+
+        code = self.get_source(fullname)
+        compiled_code = compile(code, filename, 'exec')
+
+        try:
+            with open(fullname + '.pyc', 'wb') as pyc:
+                pyc.write(imp.get_magic())
+                pyc.write(struct.pack('<I', py_ts))
+                marshal.dump(compiled_code, pyc)
+        except:
+            pass
+        return compiled_code
 
     def load_module(self, fullname):
         # If the module it's already in there we'll reload but won't remove the
@@ -48,8 +72,7 @@ class InlinerImporter(object):
         module = types.ModuleType(fullname)
         module.__loader__ = self
 
-        is_package, code = self.get_source(fullname, True)
-
+        is_package = self.data[fullname][0]
         path = fullname.replace('.', os.path.sep)
         if is_package:
             module.__package__ = fullname
@@ -62,7 +85,7 @@ class InlinerImporter(object):
         sys.modules[fullname] = module
 
         try:
-            compiled_code = compile(code, module.__file__, 'exec')
+            compiled_code = self.get_code(fullname, module.__file__)
             exec compiled_code in module.__dict__
         except:
             if not exists:
@@ -91,6 +114,10 @@ def prepare_package():
         exec inliner_importer_code in module.__dict__
         sys.modules[module_name] = module
 
+    # We cannot use __file__ directly because on the second run __file__ will
+    # be the compiled file (.pyc) and that's not the file we want to read.
+    filename = os.path.splitext(__file__)[0] + '.py'
+
     # Add our own finder and loader for this specific package if it's not
     # already there.
     # This must be done before we initialize the package, as it may import
@@ -110,7 +137,7 @@ def prepare_package():
         else:
             set_excepthook = FORCE_EXC_HOOK
 
-        importer = module.InlinerImporter(inliner_packages, __file__,
+        importer = module.InlinerImporter(inliner_packages, filename,
                                           set_excepthook)
         sys.meta_path.append(importer)
 
@@ -118,9 +145,6 @@ def prepare_package():
     module_dict = {}
 
     __, start, end, ts = inliner_packages[__name__]
-    # We canno use __file__ directly because on the second run __file__ will
-    # be the compiled file (.pyc) and that's not the file we want to read.
-    filename = os.path.splitext(__file__)[0] + '.py'
     with open(filename) as datafile:
         datafile.seek(start)
         code = datafile.read(end - start)

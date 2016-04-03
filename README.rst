@@ -52,6 +52,17 @@ with your normal package.
 
 Modules will also behave as usual.
 
+Loader code will automatically compile packages and modules to byte code,
+before running it.  When a module is imported for the first time, or when the
+specific's package/module source (not the whole inlined file) is more recent
+than the current compiled file, a .pyc file containing the compiled code will
+be created in the same directory as the pinlined .py file.
+
+If the byte code is up to date then it will be used instead, thus avoiding a
+recompilation, exactly the same as python normally does, with the only
+exception that all .pyc files will be in the same directory and the filenames
+will include the full path to the original file.
+
 Installation
 ------------
 
