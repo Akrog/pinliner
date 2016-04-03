@@ -142,29 +142,31 @@ def prepare_package():
                                           set_excepthook)
         sys.meta_path.append(importer)
 
-    # Execute package's init code into a new dictionary
-    module_dict = {}
-
     __, start, end, ts = inliner_packages[PINLINED_DEFAULT_PACKAGE]
     with open(filename) as datafile:
         datafile.seek(start)
         code = datafile.read(end - start)
 
-    filename = PINLINED_DEFAULT_PACKAGE + '/__init__.py'
+    # We need everything to be local variables before we clear the global dict
+    def_package = PINLINED_DEFAULT_PACKAGE
+    name = __name__
+    filename = def_package + '/__init__.py'
     compiled_code = compile(code, filename, 'exec')
-    exec compiled_code in module_dict
 
-    # Fix package variables in that dictionary
-    module_dict.update(__path__=[PINLINED_DEFAULT_PACKAGE],
-                       __file__=filename,
-                       __package__=PINLINED_DEFAULT_PACKAGE,
-                       __name__=__name__,
-                       __loader__=importer)
-
-    # Now change this modules global namespace so it matches package's original
-    # namespace
+    # Prepare globals to execute __init__ code
     globals().clear()
-    globals().update(module_dict)
+    # If we've been called directly we cannot set __path__
+    if name != '__main__':
+        globals()['__path__'] = [def_package]
+    else:
+        def_package = None
+    globals().update(__file__=filename,
+                     __package__=def_package,
+                     __name__=name,
+                     __loader__=importer)
+
+
+    exec compiled_code
 
 
 # Prepare loader's module and populate this namespace only with package's

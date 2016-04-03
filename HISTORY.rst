@@ -8,6 +8,7 @@ History
 * Add support for incompatible loaders to coexists.
 * Generate and use pyc files for modules.
 * Add support for the filename to be different than the package.
+* Now __main__ works directly from the package as expected.
 
 0.1.1 (2016-03-29)
 ------------------

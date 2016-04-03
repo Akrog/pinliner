@@ -52,6 +52,11 @@ with your normal package.
 
 Modules will also behave as usual.
 
+If your package is checking `__name__` for `__main__` it will also work as
+usual.  Although given the fact that we only have 1 file we will no longer be
+able to call other packages/modules directly from the command line to trigger
+code conditioned to `__name__` having `__main__` as its value.
+
 Loader code will automatically compile packages and modules to byte code,
 before running it.  When a module is imported for the first time, or when the
 specific's package/module source (not the whole inlined file) is more recent
