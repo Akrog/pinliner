@@ -50,6 +50,7 @@ def template(cfg):
     prefix_end = template.index(TEMPLATE_PATTERN)
     prefix_data = template[:prefix_end].replace('%{FORCE_EXC_HOOK}',
                                                 str(cfg.set_hook))
+    prefix_data = prefix_data.replace('%{DEFAULT_PACKAGE}', cfg.default_module)
     cfg.outfile.write(prefix_data)
     postfix_begin = prefix_end + len(TEMPLATE_PATTERN)
     return template[postfix_begin:]
@@ -69,10 +70,10 @@ def process_directory(cfg, base_dir, package_path):
 
 
 def process_files(cfg):
+    cfg.default_module = os.path.split(cfg.packages[0])[1]
     # template would look better as a context manager
     postfix = template(cfg)
     files = []
-
     output(cfg, "'''")
     for package_path in cfg.packages:
         base_dir, module_name = os.path.split(package_path)

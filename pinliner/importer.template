@@ -2,6 +2,7 @@ import os
 import sys
 import types
 
+PINLINED_DEFAULT_PACKAGE = '%{DEFAULT_PACKAGE}'
 PINLINER_MODULE_NAME = 'pinliner_loader'
 loader_version = '0.2.0'
 
@@ -144,19 +145,19 @@ def prepare_package():
     # Execute package's init code into a new dictionary
     module_dict = {}
 
-    __, start, end, ts = inliner_packages[__name__]
+    __, start, end, ts = inliner_packages[PINLINED_DEFAULT_PACKAGE]
     with open(filename) as datafile:
         datafile.seek(start)
         code = datafile.read(end - start)
 
-    filename = __name__ + '/__init__.py'
+    filename = PINLINED_DEFAULT_PACKAGE + '/__init__.py'
     compiled_code = compile(code, filename, 'exec')
     exec compiled_code in module_dict
 
     # Fix package variables in that dictionary
-    module_dict.update(__path__=[__name__],
+    module_dict.update(__path__=[PINLINED_DEFAULT_PACKAGE],
                        __file__=filename,
-                       __package__=__name__,
+                       __package__=PINLINED_DEFAULT_PACKAGE,
                        __name__=__name__,
                        __loader__=importer)
 
