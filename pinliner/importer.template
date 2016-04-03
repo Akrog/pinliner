@@ -26,15 +26,6 @@ class InlinerImporter(object):
         import traceback as tb
         tb.print_exception(type, value, traceback)
 
-    def _get_module(self, fullname):
-        fullname = fullname.split('.')
-        module = self.data
-        for name in fullname:
-            module = module.get(name)
-            if not module:
-                return None
-        return module
-
     def find_module(self, fullname, path):
         module = fullname in self.data
         if module:
