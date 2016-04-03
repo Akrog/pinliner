@@ -2,7 +2,7 @@
 History
 =======
 
-0.2.0 (2016-xx-yy)
+0.2.0 (2016-04-03)
 ------------------
 
 * Add support for incompatible loaders to coexists.
