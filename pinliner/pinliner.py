@@ -13,9 +13,6 @@ TEMPLATE_FILE = 'importer.template'
 TEMPLATE_PATTERN = '${CONTENTS}'
 
 
-inliner_packages = {}
-
-
 def output(cfg, what, newline=True):
     # We need indentation for PEP8
     cfg.outfile.write(what)
@@ -65,14 +62,6 @@ def process_directory(cfg, base_dir, package_path):
         elif is_package(path):
             files.extend(process_directory(cfg, base_dir, next_path))
     return files
-
-inliner_packages = {
-    "a": [
-        1, 2334, 2811],
-    "a.c": [1, 2852, 2877],
-    "a.b": [0, 2186, 2326],
-    "a.c.d": [0, 2819, 2844]
-}
 
 
 def process_files(cfg):
