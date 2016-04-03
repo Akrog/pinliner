@@ -25,7 +25,8 @@ def process_file(cfg, base_dir, package_path):
         output(cfg, '<tag:' + package_path + '>')
     path = os.path.splitext(package_path)[0].replace(os.path.sep, '.')
     package_start = cfg.outfile.tell()
-    with open(os.path.join(base_dir, package_path), 'r') as f:
+    full_path = os.path.join(base_dir, package_path)
+    with open(full_path, 'r') as f:
         # Read the whole file
         code = f.read()
 
@@ -36,7 +37,10 @@ def process_file(cfg, base_dir, package_path):
     is_package = 1 if path.endswith('__init__') else 0
     if is_package:
         path = path[:-9]
-    return path, is_package, package_start, package_end
+
+    # Get file timestamp
+    timestamp = long(os.path.getmtime(full_path))
+    return path, is_package, package_start, package_end, timestamp
 
 
 def template(cfg):
@@ -76,8 +80,7 @@ def process_files(cfg):
     output(cfg, "'''")
 
     # Transform the list into a dictionary
-    inliner_packages = {path: (is_package, begin, end)
-                        for path, is_package, begin, end in files}
+    inliner_packages = {data[0]: data[1:] for data in files}
 
     # Generate the references to the positions of the different packages and
     # modules inside the main file.

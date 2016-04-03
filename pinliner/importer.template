@@ -32,7 +32,7 @@ class InlinerImporter(object):
             return self
 
     def get_source(self, fullname, return_is_package=False):
-        is_package, start, end = self.data[fullname]
+        is_package, start, end, ts = self.data[fullname]
         with open(self.datafile) as datafile:
             datafile.seek(start)
             code = datafile.read(end - start)
@@ -117,7 +117,7 @@ def prepare_package():
     # Execute package's init code into a new dictionary
     module_dict = {}
 
-    __, start, end = inliner_packages[__name__]
+    __, start, end, ts = inliner_packages[__name__]
     # We canno use __file__ directly because on the second run __file__ will
     # be the compiled file (.pyc) and that's not the file we want to read.
     filename = os.path.splitext(__file__)[0] + '.py'
