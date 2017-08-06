@@ -165,8 +165,7 @@ def prepare_package():
                      __name__=name,
                      __loader__=importer)
 
-
-    exec compiled_code
+    exec compiled_code in globals()
 
 
 # Prepare loader's module and populate this namespace only with package's
