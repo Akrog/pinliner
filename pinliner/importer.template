@@ -99,7 +99,7 @@ class InlinerImporter(object):
 ${CONTENTS}
 
 def prepare_package():
-    # Loader's module name changes withh each major version to be able to have
+    # Loader's module name changes with each major version to be able to have
     # different loaders working at the same time.
     module_name = PINLINER_MODULE_NAME + '_' + loader_version.split('.')[0]
 
