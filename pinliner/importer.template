@@ -4,7 +4,7 @@ import types
 
 PINLINED_DEFAULT_PACKAGE = '%{DEFAULT_PACKAGE}'
 PINLINER_MODULE_NAME = 'pinliner_loader'
-loader_version = '0.2.0'
+loader_version = '0.2.1'
 
 FORCE_EXC_HOOK = %{FORCE_EXC_HOOK}
 
@@ -141,6 +141,11 @@ def prepare_package():
         importer = module.InlinerImporter(inliner_packages, filename,
                                           set_excepthook)
         sys.meta_path.append(importer)
+
+    # If this is a bundle (multiple packages) without default then don't import
+    # any package automatically.
+    if not PINLINED_DEFAULT_PACKAGE:
+        return
 
     __, start, end, ts = inliner_packages[PINLINED_DEFAULT_PACKAGE]
     with open(filename) as datafile:

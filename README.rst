@@ -32,9 +32,9 @@ And with pinliner installed you execute:
 
 .. code:: bash
 
-    $ mkdir test
-    $ pinliner my_package test/my_package.py
-    $ cd test
+    $ mkdir inlined
+    $ pinliner my_package -o inlined/my_package.py
+    $ cd inlined
     $ python
 
 You'll be able to use generated `my_package.py` file as if it were the real
@@ -67,6 +67,61 @@ If the byte code is up to date then it will be used instead, thus avoiding a
 recompilation, exactly the same as python normally does, with the only
 exception that all .pyc files will be in the same directory and the filenames
 will include the full path to the original file.
+
+Bundle
+------
+
+Pinliner is now capable of acting like a bundle where multiple packages can be
+inlined into a single file.
+
+When including multiple files the default is not to automatically load *any* of
+the packages from the module when loading the bundle.
+
+.. code:: bash
+
+    $ pinliner my_package another_package -o bundle.py
+    $ python
+
+.. code:: python
+
+    >>> import bundle
+
+    >>> import my_package
+    >>> from my_package import file_a as a_file
+    >>> from my_package.sub_package import file_b
+
+    >>> import another_package
+
+We can default to automatically load a specific package from the bundle:
+
+.. code:: bash
+
+    $ pinliner my_package another_package -d another_package -o another_package.py
+
+This is convenient if we include multiple packages but we have a main program
+that we want to execute automatically and the others are just libraries
+required by this probram.
+
+Inlined file name
+-----------------
+
+For inlined package and bundles to work as expected one must pay attention to
+the inlined file name following these rules:
+
+- Output filename of an inlined single package must have the same name as the
+  package itself: ``$ pinliner my_package -o inlined/my_package.py``
+
+- Output filename of a bundle with no default package must not match ANY of the
+  packages included in the bundle: ``$ pinliner my_package another_package
+  -o bundle.py``
+
+- Output filename of a bundle with a default package must match the default
+  package name: ``$ pinliner my_package another_package -d another_package
+  -o another_package.py``
+
+- Output filename of a single package with an empty default must have a name
+  that doesn't match the inlined package name: ``$ pinliner my_package -d ''
+  -o inlined.py``
 
 Installation
 ------------

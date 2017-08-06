@@ -50,7 +50,8 @@ def template(cfg):
     prefix_end = template.index(TEMPLATE_PATTERN)
     prefix_data = template[:prefix_end].replace('%{FORCE_EXC_HOOK}',
                                                 str(cfg.set_hook))
-    prefix_data = prefix_data.replace('%{DEFAULT_PACKAGE}', cfg.default_module)
+    prefix_data = prefix_data.replace('%{DEFAULT_PACKAGE}',
+                                      cfg.default_package)
     cfg.outfile.write(prefix_data)
     postfix_begin = prefix_end + len(TEMPLATE_PATTERN)
     return template[postfix_begin:]
@@ -70,7 +71,6 @@ def process_directory(cfg, base_dir, package_path):
 
 
 def process_files(cfg):
-    cfg.default_module = os.path.split(cfg.packages[0])[1]
     # template would look better as a context manager
     postfix = template(cfg)
     files = []
@@ -145,8 +145,9 @@ include a newline and a <tag:file_path> tag before each of the source files.
     parser = MyParser(description=general_description, version=__version__,
                       epilog=general_epilog, argument_default='',
                       formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('package', help='Package to inline.')
-    parser.add_argument('outfile', nargs='?', type=argparse.FileType('w'),
+    parser.add_argument('packages', nargs='+', help='Packages to inline.')
+    parser.add_argument('-o', '--outfile', nargs='?',
+                        type=argparse.FileType('w'),
                         default=sys.stdout, help='Output file.')
     parser.add_argument('--set-except', default=None, dest='set_hook',
                         action='store_true',
@@ -157,7 +158,18 @@ include a newline and a <tag:file_path> tag before each of the source files.
     parser.add_argument('--tag', default=False, dest='tagging',
                         action='store_true',
                         help="Mark with <tag:file_path> each added file.")
-    return parser.parse_args()
+    parser.add_argument('-d', '--default-pkg', default=None,
+                        dest='default_package',
+                        help='Define the default package when multiple '
+                             'packages are inlined.')
+    cfg = parser.parse_args()
+    # If user didn't pass a default package determine one ourselves.
+    if cfg.default_package is None:
+        # For single package file default is the package, for multiple packaged
+        # files default is none (act as a bundle).
+        def_file = cfg.packages[0] if len(cfg.packages) == 1 else ''
+        cfg.default_package = def_file
+    return cfg
 
 
 def is_module(module):
@@ -174,13 +186,20 @@ def validate_args(cfg):
     missing = False
     # This is weird now, but in the future we'll allow to inline multiple
     # packages
-    cfg.packages = [cfg.package]
     for package in cfg.packages:
         if not is_package(package):
             sys.stderr.write('ERROR: %s is not a python package' % package)
             missing = True
     if missing:
         sys.exit(1)
+
+    if cfg.default_package:
+        if cfg.default_package not in cfg.packages:
+            sys.stderr.write('ERROR: %s is not a valid default package' %
+                             cfg.default_pkg)
+            sys.exit(2)
+        # Convert the default package from path to package
+        cfg.default_package = os.path.split(cfg.default_package)[1]
 
 
 def main():
