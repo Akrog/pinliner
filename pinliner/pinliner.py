@@ -39,7 +39,7 @@ def process_file(cfg, base_dir, package_path):
         path = path[:-9]
 
     # Get file timestamp
-    timestamp = long(os.path.getmtime(full_path))
+    timestamp = int(os.path.getmtime(full_path))
     return path, is_package, package_start, package_end, timestamp
 
 
@@ -142,10 +142,11 @@ include a newline and a <tag:file_path> tag before each of the source files.
 """ % __version__
     general_epilog = None
 
-    parser = MyParser(description=general_description, version=__version__,
+    parser = MyParser(description=general_description,
                       epilog=general_epilog, argument_default='',
                       formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('packages', nargs='+', help='Packages to inline.')
+    parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument('-o', '--outfile', nargs='?',
                         type=argparse.FileType('w'),
                         default=sys.stdout, help='Output file.')
