@@ -87,7 +87,7 @@ class InlinerImporter(object):
 
         try:
             compiled_code = self.get_code(fullname, module.__file__)
-            exec compiled_code in module.__dict__
+            exec(compiled_code, module.__dict__)
         except:
             if not exists:
                 del sys.modules[fullname]
@@ -112,7 +112,7 @@ def prepare_package():
         module = types.ModuleType(module_name)
         module.__package__ = ''
         module.__file__ = module_name + '.py'
-        exec inliner_importer_code in module.__dict__
+        exec(inliner_importer_code, module.__dict__)
         sys.modules[module_name] = module
 
     # We cannot use __file__ directly because on the second run __file__ will
@@ -170,7 +170,7 @@ def prepare_package():
                      __name__=name,
                      __loader__=importer)
 
-    exec compiled_code in globals()
+    exec(compiled_code, globals())
 
 
 # Prepare loader's module and populate this namespace only with package's
